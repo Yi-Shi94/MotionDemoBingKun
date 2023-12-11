@@ -1,0 +1,40 @@
+model_name: "HUMOR"
+
+model_hyperparam:
+    layer_num: 10
+    #cond_mask_prob: 0
+    #cond_emb_size: 256 #condition frame for [class, text, etc]
+    time_emb_size: 256 #time embediing
+    hidden_size: 1024 
+    use_cond: False
+    cond_num_cls: 0
+
+optimizer:
+    anneal_times: 5
+    initial_lr: 0.0001
+    final_lr: 0.00001
+    teacher_epochs: 700
+    ramping_epochs: 300
+    student_epochs: 300
+    mini_batch_size: 256
+    rollout: 3
+    EMA: 
+        ema_decay: 0.9999
+        ema_start: 5000
+        ema_update_rate: 1
+
+data:   
+    dataset_name: "AMASS"
+    path: "data/AMASS_processed/CMU"
+    min_motion_len: 0
+    max_motion_len: -1
+    data_trim_begin: 0
+    data_trim_end: 0
+    use_angle: False
+    use_vel: True
+    
+test:
+    test_interval: 100
+    test_num_steps: 60
+    test_num_trials: 8
+    test_num_init_frame: 5

@@ -1,0 +1,8 @@
+dataset_name: "LAFAN1"
+path: "data/lafan1"
+min_motion_len: 0
+max_motion_len: -1
+data_trim_begin: 0
+data_trim_end: 0
+use_angle: False
+use_vel: True
