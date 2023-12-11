@@ -41,20 +41,20 @@ def get_data_from_dataset():
     
     #IK THEN FK
     #TODO BINGKUN
-    #data_frames_jnts_position2 = dataset.x_to_jnts(data_frames_denormalized, mode='ik_fk') #FK  dataset.base_dataset.lafan1_dataset.x_to_jnts
-    #print("ikfk:")
-    #plot_util.plot_lafan1(data_frames_jnts_position2, dataset.links)
+    data_frames_jnts_position3 = dataset.x_to_jnts(data_frames_denormalized, mode='ik_fk') #FK  dataset.base_dataset.lafan1_dataset.x_to_jnts
+    print("ikfk:")
+    plot_util.plot_lafan1(data_frames_jnts_position3, dataset.links)
     
 
     #PLOT ALTOGETHER
-    jnt_pos = np.array([data_frames_jnts_position0, data_frames_jnts_position1, data_frames_jnts_position2])
+    jnt_pos = np.array([data_frames_jnts_position0, data_frames_jnts_position1, data_frames_jnts_position2, data_frames_jnts_position3])
     
     num_char = jnt_pos.shape[0]
     num_frame = jnt_pos.shape[1]
     num_jnt = jnt_pos.shape[2]
     jnt_pos = jnt_pos.transpose(1,0,2,3).reshape(num_frame, -1, jnt_pos.shape[3])
     links = np.concatenate([np.array(dataset.links) + j*num_jnt for j in range(num_char)],axis=0)
-    color_map = ['r','g', 'b']
+    color_map = ['r','g', 'b', 'yellow']
     colors =  [color_map[j] for j in range(num_char) for _ in dataset.links]
     plot_util.plot_lafan1(jnt_pos, links, colors=colors) # 骨骼结构 dataset.util.skeleton_info.py
 

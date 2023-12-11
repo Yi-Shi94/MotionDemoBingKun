@@ -1,14 +1,14 @@
 import copy
 import glob
-
+import torch
+import torch.optim as optim
 import numpy as np
+import tqdm
 import dataset.base_dataset as base_dataset
 import dataset.util.bvh as bvh_util
 import dataset.util.geo as geo_util
 import dataset.util.plot as plot_util
 import os.path as osp
-
-from scipy.spatial.transform import Rotation as R
 
 class LAFAN1(base_dataset.BaseMotionData):
     NAME = 'LAFAN1'
@@ -43,35 +43,84 @@ class LAFAN1(base_dataset.BaseMotionData):
         ####BINGQUN####
         pass
 
-    def ik_frame(self, last_rotation, frame):
+    def ik_frame(self, last_rotation, current_positions):
         num_jnt = len(self.joint_name)
-        positions = frame[..., 3:3+3*num_jnt].reshape(-1, num_jnt, 3)   
+        
         #TODO
         ####BINGQUN####
         return rotation
 
-    def ik_seq(self, init_rotation, frames):
+    def ik_seq(self, init_frame, frames):
         #TODO
         ####BINGQUN####
+        num_jnt = len(self.joint_name)
+        init_rotation = init_frame[0, 3+6*num_jnt: 3+6*num_jnt+6]
+        positions = frames[..., 3:3+3*num_jnt]
         return rotations
 
-    def fk_local_frame(self, frame):
-        frame = copy.deepcopy(frame)
-        joint_rotations = torch.zeros((num_jnt, 3, 3), device=frame.device, dtype=frame.dtype)
-        joint_orientations = torch.zeros((num_jnt, 3, 3), device=frame.device, dtype=frame.dtype)
-        joint_positions = torch.zeros((num_jnt,3), device=frame.device, dtype=frame.dtype)
+        
+    def ik_seq_slow(self, init_frame, frames, max_iter=200, tol_change=0.0001, device = 'cuda:0'):
         num_jnt = len(self.joint_name)
+        init_rotation = init_frame[..., 3+6*num_jnt: 3+12*num_jnt]
+        positions = frames[..., 3:3+3*num_jnt]
 
+        self.joint_offset_pt = torch.tensor(self.joint_offset, device = device).float()
+        last_rotation = torch.tensor(init_rotation, device=device).float()
+        rotations = torch.zeros(frames.shape[0], 6*num_jnt).float()
+
+        for i in tqdm.tqdm(range(positions.shape[0])):
+            current_positions = torch.tensor(positions[i], device=device).float()
+            cur_rotation = self.ik_frame_slow(last_rotation, current_positions, max_iter, tol_change)
+            last_rotation = cur_rotation.cpu().detach()
+            rotations[i] = last_rotation
+            
+        return rot_seq
+
+    def ik_frame_slow(self, last_rotation, current_positions, max_iter, tol_change):
+        #last_rotation (num_joint * 6) 
+        #current_positions (num_joint * 3)
+        device = last_rotation.device
+        torch.autograd.set_detect_anomaly(True)
+        drot = torch.zeros(*last_rotation.shape, requires_grad=True, device= device) 
+        
+        optimizer = optim.LBFGS([drot], 
+                        max_iter=max_iter, 
+                        tolerance_change=tol_change,
+                        line_search_fn="strong_wolfe")
+
+        def f_loss(drot):
+        
+            fk_joint_positions = self.fk_local_frame_pt(last_rotation + drot)
+            loss = torch.nn.functional.mse_loss(fk_joint_positions, current_positions)
+            return loss
+        
+        def closure():
+            optimizer.zero_grad()
+            objective = f_loss(drot)
+            objective.backward()
+            return objective
+
+        optimizer.step(closure)
+        cur_rotation = last_rotation + drot
+        return cur_rotation
+
+
+    def fk_local_frame_pt(self, rotation_6d):
+        num_jnt = len(self.joint_name)
+        joint_rotations = torch.zeros((num_jnt, 3, 3), device=rotation_6d.device, dtype=rotation_6d.dtype)
+        joint_orientations = torch.zeros((num_jnt, 3, 3), device=rotation_6d.device, dtype=rotation_6d.dtype)
+        joint_positions = torch.zeros((num_jnt,3), device=rotation_6d.device, dtype=rotation_6d.dtype)
+
+        print(rotation_6d.shape)
         for i in range(num_jnt):
-            local_rotation = geo_util.rotation_6d_to_matrix(frame[..., 6*i: 6*i+6])
+            local_rotation = geo_util.m6d_to_rotmat(rotation_6d[..., 6*i: 6*i+6])
             if self.joint_parent[i] == -1: #root
                 joint_orientations[i,:,:] = local_rotation 
             else:                
                 joint_orientations[i] = torch.matmul(joint_orientations[self.joint_parent[i]],local_rotation)
-                joint_positions[i] = joint_positions[self.joint_parent[i]] + torch.matmul(joint_orientations[self.joint_parent[i]], self.joint_offset[i])
+                joint_positions[i] = joint_positions[self.joint_parent[i]] + torch.matmul(joint_orientations[self.joint_parent[i]], self.joint_offset_pt[i])
         
-        joint_positions[..., 1] += frame[...,4]
-        return joint_positions
+        return joint_positions.view(-1)
 
 
     def fk_local_seq(self, frames):
@@ -141,9 +190,9 @@ class LAFAN1(base_dataset.BaseMotionData):
         elif mode == 'velocity':
             jnts = self.vel_step_seq(x)
         elif mode == 'ik_fk':
-            rotations = self.ik_seq(x[..., 3:3+3*num_jnt])
-            x[..., 3+6*num_jnt:3+12*num_jnt] = rotations[:,:2,:].reshape(-1,6*num_jnt)
-            jnts = self.vel_step_seq(rotations)
+            rotations = self.ik_seq_slow(x[0],x[1:])
+            x[1:, 3+6*num_jnt:3+12*num_jnt] = rotations.numpy()
+            jnts = self.fk_local_seq(X)
 
         dpm = np.array([[0.0,0.0,0.0]])
         dpm_lst = np.zeros((dxdy.shape[0],3))
