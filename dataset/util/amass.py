@@ -1,4 +1,5 @@
 import dataset.util.geo as geo_util
+import dataset.util.plot as plot_util
 import dataset.util.skeleton_info as skel_dict
 import matplotlib.pyplot as plt
 import numpy as np
@@ -61,42 +62,50 @@ def load_amass_file(amass_file, root_idx):
                         pose_body[1:].reshape(root_dxdy.shape[0],-1)],axis=-1)  
     return xs
 
+
 def load_amass_info(amass_file):
     import matplotlib.pyplot as plt
     motion_frame = np.load(amass_file)
-    pos = fk_(motion_frame)
-    plot_3d_pt(pos)
+    pos = fk(motion_frame).numpy()
+    
+    jnt_lengths = np.zeros((motion_frame['joints'].shape[0],len(skel_dict.skel_dict['AMASS']['links'])))
+    links = skel_dict.skel_dict['AMASS']['links']
+    for i in range(len(links)):
+        st_idx = links[i][0]
+        ed_idx = links[i][1]
+        st = motion_frame['joints'][:, st_idx]
+        ed = motion_frame['joints'][:, ed_idx]
+
+        length = np.linalg.norm(st-ed, axis=-1)
+        jnt_lengths[:,i] = length 
+    #print(amass_file, jnt_lengths.mean(axis=0), jnt_lengths.std(axis=0))
+    jnt_pos = np.array([pos, motion_frame['joints']])
+    num_char = jnt_pos.shape[0]
+    num_frame = jnt_pos.shape[1]
+    num_jnt = jnt_pos.shape[2]
+    jnt_pos = jnt_pos.transpose(1,0,2,3).reshape(num_frame, -1, jnt_pos.shape[3])
+    links = np.concatenate([np.array(skel_dict.skel_dict['AMASS']['links']) + j*num_jnt for j in range(num_char)],axis=0)
+    color_map = ['r','g']
+    colors =  [color_map[j] for j in range(num_char) for _ in skel_dict.skel_dict['AMASS']['links']]
+    plot_util.plot_amass(jnt_pos, links) # 骨骼结构 dataset.util.skeleton_info.py
     return  
-
-def plot_3d_pt(pts):
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    ax.scatter(pts[0,:,0], pts[0,:,1], pts[0,:,2], marker='^')
-
-    ax.set_xlabel('X Label')
-    ax.set_ylabel('Y Label')
-    ax.set_zlabel('Z Label')
-
-    plt.show()
-    print(sss)
 
 
 def fk(motion_frame):
-    
-    joint_positions = torch.tensor(motion_frame['joints'])
-    dtype = joint_positions.dtype
-    num_jnt = joint_positions.shape[1]
-    num_frames = joint_positions.shape[0]
+    joints = torch.tensor(motion_frame['joints'])
+    dtype = joints.dtype
+    num_jnt = joints.shape[1]
+    num_frames = joints.shape[0]
+    joint_positions = torch.zeros(num_frames, num_jnt, 3).float()
     joint_rotations = torch.zeros(num_frames, num_jnt, 4).float()
     joint_orientations = torch.zeros(num_frames, num_jnt, 4).float()
-    joint_orientations_inv = torch.zeros(num_frames, num_jnt, 4)
+    joint_translation = torch.zeros(num_frames, num_jnt, 4)
     #fk (at origin)
-    joint_offset = torch.zeros(num_frames, num_jnt, 3).float()
+    joint_offset = torch.tensor(skel_dict.skel_dict['AMASS']['offset_joint'])
     root_rots_expmap = torch.tensor(motion_frame['root_orient'])
     rots_expmap = torch.tensor(motion_frame['pose_body'])
     betas =  motion_frame['betas']
     joint_parent = get_parent_from_link(skel_dict.skel_dict['AMASS']['links'])
-    
     for i in range(num_jnt):
         
         if joint_parent[i] == -1: #root
@@ -106,14 +115,14 @@ def fk(motion_frame):
             idx = i-1
             local_rotation = geo_util.exp_map_to_quat(rots_expmap[:, 3*idx: 3*idx+3])                
             joint_orientations[:,i] = geo_util.quat_mul(joint_orientations[:,joint_parent[i]], local_rotation)
-            joint_positions[:,i] = joint_positions[:,joint_parent[i]] + geo_util.quat_rotate(joint_orientations[:,joint_parent[i]], joint_offset[i])
-            
-    joint_positions[..., 2] += frames[..., [3]] #height
-        
+            joint_positions[:,i] = joint_positions[:,joint_parent[i]] + geo_util.quat_rotate(joint_orientations[:,joint_parent[i]], joint_offset[i].expand(joint_orientations.shape[0],-1))
+    
+    joint_positions += joints[..., [0], :] #height
+    #joints -= joints[:,[0],:]
+    print((joint_positions-joints).sum())
     return joint_positions
 
-def fk_rev(motion_frame):
-    
+def retrieve_offset(motion_frame):
     joint_positions = torch.tensor(motion_frame['joints'])
     dtype = joint_positions.dtype
     num_jnt = joint_positions.shape[1]
@@ -142,8 +151,6 @@ def fk_rev(motion_frame):
             inv_ori = geo_util.quat_conjugate(joint_orientations[:,joint_parent[i]])
             trans = joint_positions[:,i]-joint_positions[:,joint_parent[i]]
             joint_offset[:,i] = geo_util.quat_rotate(inv_ori, trans)
-    #joint_positions[..., 1] += frames[..., [4]] #height
-    
     return joint_offset
 
 def extract_sk_lengths(positions, linked_joints):
