@@ -5,7 +5,7 @@ import dataset.util.plot as plot_util
 
 
 def get_data_from_dataset():
-    #config_file = 'config/model/amdm_lafan1_single.yaml'
+    #config_file = 'config/model/amdm_style100_single_cond.yaml'
     config_file = 'config/model/amdm_style100_single.yaml'
     dataset = dataset_builder.build_dataset(config_file, 'cpu')
 
@@ -19,8 +19,10 @@ def get_data_from_dataset():
         #data_frames[i][:,3:3+3*njoint] = joint_positions 这一帧关节点位置 （root位于原点）
         #data_frames[i][1:,3+3*njoint:3+6*njoint] = joint_velocities  这一帧关节点的速度
         #data_frames[i][:,3+6*njoint:3+12*njoint] = joint_orientations 这一帧关节局部旋转6d表示（3x3旋转矩阵的前两行）
-        data_frames[i] = dataset[i][0]
-    
+        #data, _ = dataset[i]
+        data = dataset[i]
+        data_frames[i] = data[0]
+
     data_frames_denormalized = dataset.denorm_data(data_frames) #代码 dataset.base_dataset.denorm_data
     #data_frames_denormalized是[Frame * X]的数组 
 

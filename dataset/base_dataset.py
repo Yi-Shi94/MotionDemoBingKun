@@ -231,14 +231,20 @@ class BaseMotionData(data.Dataset):
             raise ValueError("Unknown normalization mode")
         return t
     
-    def get_dim_by_key(key):
-        pass
+    def get_dim_by_key(self, category, key):
+        if category == "heading":
+            return [2]
+        elif category == "rootdxdy":
+            return [0,1]
+        
+        elif category == "joint_pos":
+            return 
 
-    def fk(ang):
-        pass
+        elif category == "joint_angle":
+            return 
 
-    def ik(pos):
-        pass
+        elif category == "joint_vel":
+            return
 
     def __len__(self):
         return len(self.valid_idx)

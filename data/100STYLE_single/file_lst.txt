@@ -1,2 +1,1 @@
 data/100STYLE_single/Akimbo/Akimbo_BR.bvh
-data/100STYLE_single/Akimbo/Akimbo_TR1.bvh
