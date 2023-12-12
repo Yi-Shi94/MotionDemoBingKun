@@ -26,17 +26,17 @@ def get_data_from_dataset():
 
     #转化为全局关节的位置 
     data_frames_jnts_position0 = dataset.x_to_jnts(data_frames_denormalized, mode='position') #代码 dataset.base_dataset.lafan1_dataset.x_to_jnts
-    #print("joint:")
+    print("joint:")
     plot_util.plot_lafan1(data_frames_jnts_position0, dataset.links)
     
     #FK 
     data_frames_jnts_position1 = dataset.x_to_jnts(data_frames_denormalized, mode='angle') #FK  dataset.base_dataset.lafan1_dataset.x_to_jnts
-    #print("fk:")
+    print("fk:")
     plot_util.plot_lafan1(data_frames_jnts_position1, dataset.links)
 
     #VELOCITY
     data_frames_jnts_position2 = dataset.x_to_jnts(data_frames_denormalized, mode='velocity') #frame(x) = frame(x-1)+delta(x-1)  dataset.base_dataset.lafan1_dataset.x_to_jnts
-    #print("vel:")
+    print("vel:")
     plot_util.plot_lafan1(data_frames_jnts_position2, dataset.links)
     
     #IK THEN FK

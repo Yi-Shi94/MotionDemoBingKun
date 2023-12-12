@@ -151,9 +151,6 @@ def read_bvh(path, foot_idx_lst, root_idx, unit, source_fps=30, target_fps=30):
     return final_x
 
 def output_as_bvh(final_x):
-
-
-
     pass
 
 
