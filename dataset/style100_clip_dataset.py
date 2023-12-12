@@ -13,7 +13,7 @@ import dataset.base_dataset as base_dataset
 import dataset.util.bvh as bvh_util
 import dataset.util.geo as geo_util
 import dataset.util.plot as plot_util
-
+import dataset.util.unit as unit_util
 from transformers import AutoModel, AutoTokenizer
 
 class STYLE100CLIP(base_dataset.BaseMotionData):
@@ -37,7 +37,7 @@ class STYLE100CLIP(base_dataset.BaseMotionData):
         # [style_text_emb for i in class_index]
         super().__init__(config)
 
-        self.joint_offset = bvh_util.unit_conver_scale(self.unit)*np.array(self.skel_info["offset_joint"])
+        self.joint_offset = unit_util.unit_conver_scale(self.unit)*np.array(self.skel_info["offset_joint"])
         self.joint_parent = bvh_util.get_parent_from_link(self.skel_info["links"])
         self.joint_name = self.skel_info["name_joint"]
 

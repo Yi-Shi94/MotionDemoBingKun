@@ -101,17 +101,16 @@ class BaseMotionData(data.Dataset):
                 self.file_lst.append(fname)
                 cur_valid_idx = list(range(self.total_len, self.total_len + length - self.rollout))
                 cur_test_valid_idx = cur_valid_idx[:-self.test_num_steps]
-
+                
                 self.valid_idx += cur_valid_idx
                 self.test_valid_idx += cur_test_valid_idx 
                 self.total_len += length
                 self.motion_lst.append(motion)
             
-            self.frame_dim = motion.shape[-1] 
             self.valid_idx = np.array(self.valid_idx)
-            skip_num = len(self.test_valid_idx)//self.test_num_init_frame
+            skip_num = max(len(self.test_valid_idx)//self.test_num_init_frame,1)
             self.test_valid_idx = np.array(self.test_valid_idx)[::skip_num]
-
+            
             self.motion_flattened = np.concatenate(self.motion_lst,axis=0)
             self.motion_flattened, self.normalization = self.create_norm(self.motion_flattened, 'zscore')
             
@@ -132,9 +131,8 @@ class BaseMotionData(data.Dataset):
             np.save(test_idx_file,self.test_valid_idx)
             np.save(mocap_file,self.motion_flattened)
         
-
         self.test_ref_clips = np.array([self.motion_flattened[idx:idx+self.test_num_steps] for idx in self.test_valid_idx])
-        self.frame_size = self.motion_flattened.shape[-1]
+        self.frame_size = self.frame_dim = self.motion_flattened.shape[-1]
         print('ref start index',self.test_valid_idx)
         print('data shape:{}'.format(self.motion_flattened.shape))
 

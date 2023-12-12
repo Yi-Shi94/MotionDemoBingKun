@@ -44,4 +44,4 @@ test:
     test_interval: 500
     test_num_steps: 60
     test_num_trials: 8
-    test_num_init_frame: 2
+    test_num_init_frame: 5

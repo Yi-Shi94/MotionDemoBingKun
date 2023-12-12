@@ -24,11 +24,55 @@ SMPL_links = [
             ]
 
 SMPL_name_joint = [
-    "root", "hip","rhip","lowerback","lknee","rknee",
-    "upperback","lankle","rankle","chest",
-    "ltoe","rtoe","lowerneck","lclavicle","rclavicle",
-    "upperneck","lshoulder","rshoulder",
-    "lelbow","relbow","lwrist","rwrist"
+     "root",
+    "lhip",
+    "rhip",
+    "lowerback",
+    "lknee",
+    "rknee",
+    "upperback",
+    "lankle",
+    "rankle",
+    "chest",
+    "ltoe",
+    "rtoe",
+    "lowerneck",
+    "lclavicle",
+    "rclavicle",
+    "upperneck",
+    "lshoulder",
+    "rshoulder",
+    "lelbow",
+    "relbow",
+    "lwrist",
+    "rwrist",
+]
+
+
+
+SMPL_joint_offset = [
+    [ 0.0000e+00,  0.0000e+00,  0.0000e+00],
+    [ 7.4191e-02, -8.5461e-02, -1.7308e-02],
+    [-7.1594e-02, -8.3623e-02, -1.4339e-02],
+    [-1.3948e-03,  9.8195e-02, -1.4825e-02],
+    [ 3.5133e-02, -3.9267e-01,  2.7427e-03],
+    [-4.0115e-02, -3.9730e-01,  2.0664e-04],
+    [ 1.9905e-03,  1.2180e-01,  1.6719e-04],
+    [-1.3309e-02, -4.1153e-01, -4.8053e-02],
+    [ 1.4754e-02, -4.0995e-01, -4.7991e-02],
+    [ 2.4568e-03,  5.0603e-02,  2.4683e-02],
+    [ 2.0389e-02, -5.7741e-02,  1.2779e-01],
+    [-2.6866e-02, -4.7960e-02,  1.3085e-01],
+    [ 1.4684e-03,  2.3297e-01, -6.0496e-02],
+    [ 7.2725e-02,  1.2933e-01, -4.3755e-02],
+    [-7.3775e-02,  1.2371e-01, -4.9582e-02],
+    [ 8.9063e-03,  6.4604e-02,  5.7413e-02],
+    [ 8.6998e-02,  3.8014e-02, -2.4794e-03],
+    [-9.2000e-02,  3.9984e-02, -6.2488e-03],
+    [ 2.5586e-01, -1.8661e-02, -2.6340e-02],
+    [-2.5963e-01, -1.9262e-02, -1.8788e-02],
+    [ 2.5177e-01,  1.0090e-02,  2.5703e-03],
+    [-2.5894e-01,  4.9262e-03, -2.5922e-03]
 ]
 
 
@@ -188,6 +232,6 @@ STYLE100_joint_offset = [[ 0.0000000e+00,  0.0000000e+00,  0.0000000e+00],
 skel_dict = {
             'STYLE100':{'links':STYLE100_links, 'name_joint':STYLE100_name_joint, 'offset_joint':STYLE100_joint_offset, 'num_joint':23, 'root_idx':0, 'head_idx':[5,6], 'hand_idx':[10,14],'foot_idx':[17,18,21,22],'fps':30,'unit':'meter', 'st_angle_offset':-90},
             'LAFAN1':{'links':LAFAN1_links, 'name_joint':LAFAN1_name_joint, 'offset_joint':LAFAN1_joint_offset, 'num_joint':22, 'root_idx':0, 'head_idx':[12,13],'hand_idx':[17,21],'foot_idx':[3,4,7,8],  'fps':30, 'unit':'meter','st_angle_offset':-180, 'transmap':LAFAN1_transmap, 'rev_transmap':LAFAN1_rev_transmap, },
-            'AMASS':{'links': SMPL_links, 'name_joint':SMPL_name_joint, 'num_joint':22, 'root_idx':0,  'head_idx':[12,15], 'hand_idx':[20,21], 'foot_idx':[7,8,10,11], 'fps':30, 'unit':'meter'}
+            'AMASS':{'links': SMPL_links, 'name_joint':SMPL_name_joint,'offset_joint':SMPL_joint_offset, 'num_joint':22, 'root_idx':0,  'head_idx':[12,15], 'hand_idx':[20,21], 'foot_idx':[7,8,10,11], 'fps':30, 'unit':'meter'}
             }
 

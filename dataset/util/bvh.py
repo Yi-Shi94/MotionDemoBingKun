@@ -1,20 +1,8 @@
-from fairmotion.data import bvh
+#from fairmotion.data import bvh
 import numpy as np
 import copy
 import dataset.util.geo as geo_util
 
-def unit_conver_scale(unit):
-    # assume the input as cm, 'unit' as the target unit
-    if unit in ['feet', 'foot']:
-        scale = 1.0/30.48
-    elif unit in ['m', 'meter']:
-        scale = 1.0/100
-    elif unit in ['cm', 'centermeter']:
-        scale = 1.0
-    else:
-        scale = 1.0
-        print('unit not implemented, scale as 1.0')
-    return scale
 
 def extract_sk_lengths(positions, linked_joints):
     #position: NxJx3
@@ -24,12 +12,6 @@ def extract_sk_lengths(positions, linked_joints):
         length =  np.linalg.norm(positions[:,st] - positions[:,ed], axis=-1)     
         lengths[i] = length
     return np.mean(lengths,axis=-1)
-
-
-def get_bvh_frames(path):
-    motion = bvh.load(path, load_motion=True)
-    positions = motion.positions(local=False) 
-    return positions.shape[0]-1
 
 
 def get_parent_from_link(links):
@@ -47,6 +29,13 @@ def get_parent_from_link(links):
     for i in range(max_index+1):
         parents.append(parents_dict[i])
     return parents
+    
+def get_bvh_frames(path):
+    motion = bvh.load(path, load_motion=True)
+    positions = motion.positions(local=False) 
+    return positions.shape[0]-1
+
+
 
 def load_bvh_info(bvh_file_path):
     joint_name = []

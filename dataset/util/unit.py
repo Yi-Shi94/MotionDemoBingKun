@@ -30,3 +30,16 @@ def x_unit_transform(x, in_unit, out_unit):
     x_out = cm_to_ouput(x, out_unit)
     return x_out
 
+
+def unit_conver_scale(unit):
+    # assume the input as cm, 'unit' as the target unit
+    if unit in ['feet', 'foot']:
+        scale = 1.0/30.48
+    elif unit in ['m', 'meter']:
+        scale = 1.0/100
+    elif unit in ['cm', 'centermeter']:
+        scale = 1.0
+    else:
+        scale = 1.0
+        print('unit not implemented, scale as 1.0')
+    return scale

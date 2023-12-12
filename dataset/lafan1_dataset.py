@@ -1,20 +1,24 @@
 import copy
 import glob
-import torch
-import torch.optim as optim
+import os.path as osp
 import numpy as np
 import tqdm
+
+import torch
+import torch.optim as optim
+
 import dataset.base_dataset as base_dataset
 import dataset.util.bvh as bvh_util
 import dataset.util.geo as geo_util
 import dataset.util.plot as plot_util
-import os.path as osp
+import dataset.util.unit as unit_util
+
 
 class LAFAN1(base_dataset.BaseMotionData):
     NAME = 'LAFAN1'
     def __init__(self, config):
         super().__init__(config)
-        self.joint_offset = bvh_util.unit_conver_scale(self.unit)*np.array(self.skel_info["offset_joint"])
+        self.joint_offset = unit_util.unit_conver_scale(self.unit)*np.array(self.skel_info["offset_joint"])
         self.joint_parent = bvh_util.get_parent_from_link(self.skel_info["links"])
         self.joint_name = self.skel_info["name_joint"]
 
