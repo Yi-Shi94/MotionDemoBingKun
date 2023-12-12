@@ -39,13 +39,13 @@ class AMASS(base_dataset.BaseMotionData):
 
     def ik_seq_slow(self, init_frame, frames, max_iter=1000, tol_change=0.0000005, device = 'cuda:0'):
         num_jnt = len(self.joint_name)
-        init_rotation = init_frame[..., 3+6*num_jnt: 3+12*num_jnt]
+        init_rotation = init_frame[..., 3+6*num_jnt: 3+10*num_jnt]
         frames = copy.deepcopy(frames)
         positions = frames[..., 3:3+3*num_jnt]
-        positions = positions.reshape((-1, 22, 3))
+        positions = positions.reshape((-1, num_jnt, 3))
         positions[...,1] -= frames[...,None,4]
 
-        last_rotation = init_rotation.reshape(-1, 22, 6)
+        last_rotation = init_rotation.reshape(-1, num_jnt, 6)
         rotations = np.zeros((frames.shape[0], num_jnt, 6))
 
         for i in tqdm.tqdm(range(positions.shape[0])):
@@ -85,8 +85,8 @@ class AMASS(base_dataset.BaseMotionData):
 
     def fk_local_frame_pt(self, rotation_6d):
         num_jnt = len(self.joint_name)
-        joint_rotations = torch.zeros((num_jnt, 3, 3), device=rotation_6d.device, dtype=rotation_6d.dtype)
-        joint_orientations = torch.zeros((num_jnt, 3, 3), device=rotation_6d.device, dtype=rotation_6d.dtype)
+        joint_rotations = torch.zeros((num_jnt, 4), device=rotation_6d.device, dtype=rotation_6d.dtype)
+        joint_orientations = torch.zeros((num_jnt, 4), device=rotation_6d.device, dtype=rotation_6d.dtype)
         joint_positions = torch.zeros((num_jnt,3), device=rotation_6d.device, dtype=rotation_6d.dtype)
 
         joint_offset_pt = torch.tensor(self.joint_offset, device = rotation_6d.device, requires_grad=False, dtype=rotation_6d.dtype)
@@ -107,20 +107,21 @@ class AMASS(base_dataset.BaseMotionData):
         num_frames = len(frames)
         cnt = 0
 
-        ang_frames = frames[:,3+num_jnt*6:]
+        rot_frames = frames[:,3+num_jnt*6:]
         joint_positions = np.zeros((num_frames, num_jnt, 3), dtype=dtype)
-        joint_rotations = np.zeros((num_frames, num_jnt, 3, 3), dtype=dtype)
-        joint_orientations = np.zeros((num_frames, num_jnt, 3, 3), dtype=dtype)
+        joint_rotations = np.zeros((num_frames, num_jnt, 4), dtype=dtype)
+        joint_orientations = np.zeros((num_frames, num_jnt, 4), dtype=dtype)
         #fk (at origin)
         for i in range(num_jnt):
-            local_rotation = geo_util.rotation_6d_to_matrix(ang_frames[:, 6*i: 6*i+6])
-            if self.joint_parent[i] == -1: #root
-                joint_orientations[:,i,:,:] = local_rotation 
-            else:                
-                joint_orientations[:,i] = np.matmul(joint_orientations[:,self.joint_parent[i]], local_rotation)
-                joint_positions[:,i] = joint_positions[:,self.joint_parent[i]] + np.matmul(joint_orientations[:,self.joint_parent[i]], self.joint_offset[i])
-        
-        joint_positions[..., 1] += frames[..., [4]] #height
+            if joint_parent[i] == -1: #root
+                local_rotation = geo_util.exp_map_to_quat() 
+                joint_orientations[:,i] = local_rotation
+            else:
+                idx = i-1
+                local_rotation = geo_util.exp_map_to_quat(rot_frames[:, i * 4: i * 4 + 4])                
+                joint_orientations[:,i] = geo_util.quat_mul(joint_orientations[:,joint_parent[i]], local_rotation)
+                joint_positions[:,i] = joint_positions[:,joint_parent[i]] + geo_util.quat_rotate(joint_orientations[:,joint_parent[i]], joint_offset[i].expand(joint_orientations.shape[0],-1))
+        joint_positions += frames[..., [0], 5] #height
         
         return  joint_positions
 

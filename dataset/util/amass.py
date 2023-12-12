@@ -41,7 +41,6 @@ def load_amass_file(amass_file, root_idx):
     root_drot_quat_z = geo_util.quat_mul(geo_util.quat_conjugate(rot1), rot0)
     root_drot_angle_z = geo_util.calc_heading(root_drot_quat_z)
 
-    
     joints_vel = (joints[1:,...] - joints[:-1,...])
     root_dxdy = joints_vel[:, root_idx,:].clone()
     root_dxdy[...,2] *= 0
@@ -78,7 +77,7 @@ def load_amass_info(amass_file):
 
         length = np.linalg.norm(st-ed, axis=-1)
         jnt_lengths[:,i] = length 
-    #print(amass_file, jnt_lengths.mean(axis=0), jnt_lengths.std(axis=0))
+    print(amass_file, jnt_lengths.mean(axis=0), jnt_lengths.std(axis=0))
     jnt_pos = np.array([pos, motion_frame['joints']])
     num_char = jnt_pos.shape[0]
     num_frame = jnt_pos.shape[1]

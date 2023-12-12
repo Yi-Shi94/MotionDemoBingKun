@@ -68,10 +68,10 @@ class LAFAN1(base_dataset.BaseMotionData):
         init_rotation = init_frame[..., 3+6*num_jnt: 3+12*num_jnt]
         frames = copy.deepcopy(frames)
         positions = frames[..., 3:3+3*num_jnt]
-        positions = positions.reshape((-1, 22, 3))
+        positions = positions.reshape((-1, num_jnt, 3))
         positions[...,1] -= frames[...,None,4]
 
-        last_rotation = init_rotation.reshape(-1, 22, 6)
+        last_rotation = init_rotation.reshape(-1, num_jnt, 6)
         rotations = np.zeros((frames.shape[0], num_jnt, 6))
 
         for i in tqdm.tqdm(range(positions.shape[0])):
