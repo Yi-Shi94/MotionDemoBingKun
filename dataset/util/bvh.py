@@ -136,7 +136,6 @@ def read_bvh(path, foot_idx_lst, root_idx, unit, source_fps=30, target_fps=30):
     positions_no_heading = np.matmul(np.repeat(global_heading_rot[:, None,:, :], njoint, axis=1), positions[...,None])
     
     velocities_no_heading = positions_no_heading[1:] - positions_no_heading[:-1] #np.matmul(np.repeat(global_heading_rot[:-1, None,:, :], njoint, axis=1), (positions[1:] - positions[:-1])[...,None])
-    print(velocities_no_heading.shape)
     velocities_root_xy_no_heading = np.matmul(global_heading_rot[:-1], velocities_root[:, :, None]).squeeze()[...,[0,2]]
  
     orientations[:,0,...] = np.matmul(global_heading_rot, orientations[:,0,...]) 
@@ -150,6 +149,12 @@ def read_bvh(path, foot_idx_lst, root_idx, unit, source_fps=30, target_fps=30):
     final_x[1:,3+3*njoint:3+6*njoint] = np.reshape(velocities_no_heading, (nfrm-1,-1))
     final_x[:,3+6*njoint:3+12*njoint] = np.reshape(orientations[..., :, :2, :], (nfrm,-1))
     return final_x
+
+def output_as_bvh(final_x):
+    
+
+
+    pass
 
 
 if __name__ == '__main__':

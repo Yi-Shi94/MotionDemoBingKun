@@ -45,7 +45,6 @@ class LAFAN1(base_dataset.BaseMotionData):
 
     def ik_frame(self, last_rotation, current_positions):
         num_jnt = len(self.joint_name)
-        
         #TODO
         ####BINGQUN####
         return rotation
@@ -63,21 +62,23 @@ class LAFAN1(base_dataset.BaseMotionData):
         num_jnt = len(self.joint_name)
         init_rotation = init_frame[..., 3+6*num_jnt: 3+12*num_jnt]
         positions = frames[..., 3:3+3*num_jnt]
-        last_rotation = init_rotation
-        rotations = np.array((frames.shape[0], 6*num_jnt))
+        positions = positions.reshape((-1, 22, 3))
+        positions[...,1] -= frames[...,None,4]
+
+        last_rotation = init_rotation.reshape(-1, 22, 6)
+        rotations = np.zeros((frames.shape[0], num_jnt, 6))
 
         for i in tqdm.tqdm(range(positions.shape[0])):
-            current_positions = positions[i]
-            cur_rotation = self.ik_frame_slow(last_rotation, current_positions, max_iter, tol_change, device)
-            last_rotation = cur_rotation
-            rotations[i] = cur_rotation
+            cur_rotation = self.ik_frame_slow(last_rotation, positions[i], max_iter, tol_change, device)
+            last_rotation = copy.deepcopy(cur_rotation)
+            #print(rotations[i].shape,last_rotation.shape )
+            rotations[i] = last_rotation
             
-        return rot_seq
+        return rotations
 
     def ik_frame_slow(self, last_rotation, current_positions, max_iter, tol_change, device):
         #last_rotation (num_joint * 6) 
         #current_positions (num_joint * 3)
-        
         torch.autograd.set_detect_anomaly(True)
         last_rotation = torch.tensor(last_rotation, requires_grad=False, device=device).float()
         drot = torch.zeros(*last_rotation.shape, requires_grad=True, device= device).float()
@@ -91,7 +92,6 @@ class LAFAN1(base_dataset.BaseMotionData):
         
             fk_joint_positions = self.fk_local_frame_pt(last_rotation + drot)
             loss = torch.nn.functional.mse_loss(fk_joint_positions, current_positions)
-            print(loss)
             return loss
         
         def closure():
@@ -102,6 +102,7 @@ class LAFAN1(base_dataset.BaseMotionData):
 
         optimizer.step(closure)
         cur_rotation = last_rotation + drot
+        drot = drot.cpu().detach().numpy()
         return cur_rotation.cpu().detach().numpy()
 
 
@@ -113,14 +114,14 @@ class LAFAN1(base_dataset.BaseMotionData):
 
         joint_offset_pt = torch.tensor(self.joint_offset, device = rotation_6d.device, requires_grad=False, dtype=rotation_6d.dtype)
         for i in range(num_jnt):
-            local_rotation = geo_util.m6d_to_rotmat(rotation_6d[..., 6*i: 6*i+6])
+            local_rotation = geo_util.m6d_to_rotmat(rotation_6d[..., i,:])
             if self.joint_parent[i] == -1: #root
                 joint_orientations[i,:,:] = local_rotation 
             else:                
-                joint_orientations[i] = torch.matmul(joint_orientations[self.joint_parent[i]], local_rotation)
-                joint_positions[i] = joint_positions[self.joint_parent[i]] + torch.matmul(joint_orientations[self.joint_parent[i]], joint_offset_pt[i])
+                joint_orientations[i] = torch.matmul(joint_orientations[self.joint_parent[i]].clone(), local_rotation)
+                joint_positions[i] = joint_positions[self.joint_parent[i]] + torch.matmul(joint_orientations[self.joint_parent[i]].clone(), joint_offset_pt[i])
         
-        return joint_positions.view(-1)
+        return joint_positions#.view(-1)
 
 
     def fk_local_seq(self, frames):
@@ -145,8 +146,6 @@ class LAFAN1(base_dataset.BaseMotionData):
         
         joint_positions[..., 1] += frames[..., [4]] #height
         return  joint_positions
-
-
 
     def vel_step_frame(self, last_frame, frame):
         vel = copy.deepcopy(frame[...,3+3*num_jnt:3+6*num_jnt])
@@ -191,8 +190,8 @@ class LAFAN1(base_dataset.BaseMotionData):
             jnts = self.vel_step_seq(x)
         elif mode == 'ik_fk':
             rotations = self.ik_seq_slow(x[0],x[1:])
-            x[1:, 3+6*num_jnt:3+12*num_jnt] = rotations.numpy()
-            jnts = self.fk_local_seq(X)
+            x[1:, 3+6*num_jnt:3+12*num_jnt] = rotations.reshape(-1,6*num_jnt)
+            jnts = self.fk_local_seq(x)
 
         dpm = np.array([[0.0,0.0,0.0]])
         dpm_lst = np.zeros((dxdy.shape[0],3))

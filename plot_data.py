@@ -9,7 +9,7 @@ def get_data_from_dataset():
     config_file = 'config/model/amdm_lafan1_new.yaml'
     dataset = dataset_builder.build_dataset(config_file, 'cpu')
 
-    num_frame = 1000
+    num_frame = 100
     data_frames = np.zeros((num_frame, dataset.frame_dim))
     # FK: https://github.com/facebookresearch/fairmotion/blob/main/fairmotion/data/bvh.py
     for i in range(num_frame): 
