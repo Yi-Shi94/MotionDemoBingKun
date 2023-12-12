@@ -58,9 +58,10 @@ class LAFAN1(base_dataset.BaseMotionData):
         return rotations
 
         
-    def ik_seq_slow(self, init_frame, frames, max_iter=200, tol_change=0.0001, device = 'cuda:0'):
+    def ik_seq_slow(self, init_frame, frames, max_iter=1000, tol_change=0.0000005, device = 'cuda:0'):
         num_jnt = len(self.joint_name)
         init_rotation = init_frame[..., 3+6*num_jnt: 3+12*num_jnt]
+        frames = copy.deepcopy(frames)
         positions = frames[..., 3:3+3*num_jnt]
         positions = positions.reshape((-1, 22, 3))
         positions[...,1] -= frames[...,None,4]
@@ -92,6 +93,7 @@ class LAFAN1(base_dataset.BaseMotionData):
         
             fk_joint_positions = self.fk_local_frame_pt(last_rotation + drot)
             loss = torch.nn.functional.mse_loss(fk_joint_positions, current_positions)
+            print(loss)
             return loss
         
         def closure():

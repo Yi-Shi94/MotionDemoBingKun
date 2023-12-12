@@ -9,7 +9,7 @@ def get_data_from_dataset():
     config_file = 'config/model/amdm_lafan1_new.yaml'
     dataset = dataset_builder.build_dataset(config_file, 'cpu')
 
-    num_frame = 100
+    num_frame = 300
     data_frames = np.zeros((num_frame, dataset.frame_dim))
     # FK: https://github.com/facebookresearch/fairmotion/blob/main/fairmotion/data/bvh.py
     for i in range(num_frame): 
@@ -27,17 +27,17 @@ def get_data_from_dataset():
     #转化为全局关节的位置 
     data_frames_jnts_position0 = dataset.x_to_jnts(data_frames_denormalized, mode='position') #代码 dataset.base_dataset.lafan1_dataset.x_to_jnts
     #print("joint:")
-    #plot_util.plot_lafan1(data_frames_jnts_position0, dataset.links)
+    plot_util.plot_lafan1(data_frames_jnts_position0, dataset.links)
     
     #FK 
     data_frames_jnts_position1 = dataset.x_to_jnts(data_frames_denormalized, mode='angle') #FK  dataset.base_dataset.lafan1_dataset.x_to_jnts
     #print("fk:")
-    #plot_util.plot_lafan1(data_frames_jnts_position1, dataset.links)
+    plot_util.plot_lafan1(data_frames_jnts_position1, dataset.links)
 
     #VELOCITY
     data_frames_jnts_position2 = dataset.x_to_jnts(data_frames_denormalized, mode='velocity') #frame(x) = frame(x-1)+delta(x-1)  dataset.base_dataset.lafan1_dataset.x_to_jnts
     #print("vel:")
-    #plot_util.plot_lafan1(data_frames_jnts_position2, dataset.links)
+    plot_util.plot_lafan1(data_frames_jnts_position2, dataset.links)
     
     #IK THEN FK
     #TODO BINGKUN
