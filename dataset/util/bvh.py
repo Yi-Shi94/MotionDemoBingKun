@@ -1,9 +1,10 @@
-#from fairmotion.data import bvh
+from fairmotion.data import bvh
 import numpy as np
 import copy
 import dataset.util.geo as geo_util
 
 def unit_conver_scale(unit):
+    # assume the input as cm, 'unit' as the target unit
     if unit in ['feet', 'foot']:
         scale = 1.0/30.48
     elif unit in ['m', 'meter']:
@@ -122,7 +123,6 @@ def read_bvh(path, foot_idx_lst, root_idx, unit, source_fps=30, target_fps=30):
     ori[1] = y_min
 
     positions = (positions - ori) * scale
-
     velocities_root = positions[1:,root_idx,:] - positions[:-1,root_idx,:]
     
     positions[:,:,0] -= positions[:,0,:1]

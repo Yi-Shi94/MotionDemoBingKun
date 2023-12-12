@@ -1,5 +1,7 @@
 import dataset.amass_dataset as amass_dataset
 import dataset.lafan1_dataset as lafan1_dataset
+import dataset.style100_dataset as style100_dataset
+import dataset.style100_clip_dataset as style100_clip_dataset
 import yaml
 
 def build_dataset(config_file, device):
@@ -13,6 +15,10 @@ def build_dataset(config_file, device):
         dataset = amass_dataset.AMASS(config)
     elif (dataset_class_name == lafan1_dataset.LAFAN1.NAME):
         dataset = lafan1_dataset.LAFAN1(config)
+    elif (dataset_class_name == style100_dataset.STYLE100.NAME):
+        dataset = style100_dataset.STYLE100(config)
+    elif (dataset_class_name == style100_clip_dataset.STYLE100CLIP.NAME):
+        dataset = style100_clip_dataset.STYLE100CLIP(config)
     else:
         assert(False), "Unsupported dataset class: {}".format(dataset_class_name)
     return dataset

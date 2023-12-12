@@ -1,81 +1,60 @@
 import copy
 import glob
-import torch
-import torch.optim as optim
+import os
+
 import numpy as np
-import tqdm
 import dataset.base_dataset as base_dataset
 import dataset.util.bvh as bvh_util
 import dataset.util.geo as geo_util
 import dataset.util.plot as plot_util
 import os.path as osp
+import random
+import tqdm
+import torch
+import torch.optim as optim
 
-class LAFAN1(base_dataset.BaseMotionData):
-    NAME = 'LAFAN1'
+class STYLE100(base_dataset.BaseMotionData):
+    NAME = 'STYLE100'
     def __init__(self, config):
         super().__init__(config)
         self.joint_offset = bvh_util.unit_conver_scale(self.unit)*np.array(self.skel_info["offset_joint"])
         self.joint_parent = bvh_util.get_parent_from_link(self.skel_info["links"])
         self.joint_name = self.skel_info["name_joint"]
 
-    def process_data(self, fname, mode='train'):
+    def get_motion_fpaths(self):
+        path =  osp.join(self.path,'**/*.{}'.format('bvh'))
+        file_lst = glob.glob(path, recursive = True)
+        return file_lst
+
+    def process_data(self, fname):
+        #labal_text = fname.split('/')[-2]
         # read a single file, convert them into single format
-        final_x  = bvh_util.read_bvh(fname, foot_idx_lst=self.foot_idx, root_idx=self.root_idx, unit=self.unit)
-        # use file num as label
+        #out = bvh_util.load_bvh_info(fname)
+        final_x = bvh_util.read_bvh(fname, foot_idx_lst=self.foot_idx, root_idx=self.root_idx, \
+            unit=self.unit, source_fps=60, target_fps=self.fps)
+        # use dir name as label
         if self.data_trim_begin:
             final_x = final_x[self.data_trim_begin:]
         if self.data_trim_end:
             final_x = final_x[:-self.data_trim_end]
-        self.num_file += 1
         return final_x
-
-    def plot_jnts(self, x, path=None):
-        return plot_util.plot_lafan1(x, self.links, self.fps, path)
-
-    def plot_traj(self, x, path=None):
-        return plot_util.plot_traj_lafan1(x, path)
-
-    def get_motion_fpaths(self):
-        return glob.glob(osp.join(self.path, '*.{}'.format('bvh')))
     
-
-    def LBS(self, rotations, weights, vertices):
-        #TODO #
-        ####BINGQUN####
-        pass
-
-    def ik_frame(self, last_rotation, current_positions):
-        num_jnt = len(self.joint_name)
-        #TODO
-        ####BINGQUN####
-        return rotation
-
-    def ik_seq(self, init_frame, frames):
-        #TODO
-        ####BINGQUN####
-        num_jnt = len(self.joint_name)
-        init_rotation = init_frame[0, 3+6*num_jnt: 3+6*num_jnt+6]
-        positions = frames[..., 3:3+3*num_jnt]
-        return rotations
-
-        
     def ik_seq_slow(self, init_frame, frames, max_iter=1000, tol_change=0.0000005, device = 'cuda:0'):
         num_jnt = len(self.joint_name)
         init_rotation = init_frame[..., 3+6*num_jnt: 3+12*num_jnt]
         frames = copy.deepcopy(frames)
         positions = frames[..., 3:3+3*num_jnt]
-        positions = positions.reshape((-1, 22, 3))
+        positions = positions.reshape((-1, num_jnt, 3))
         positions[...,1] -= frames[...,None,4]
 
-        last_rotation = init_rotation.reshape(-1, 22, 6)
+        last_rotation = init_rotation.reshape(-1, num_jnt, 6)
         rotations = np.zeros((frames.shape[0], num_jnt, 6))
 
         for i in tqdm.tqdm(range(positions.shape[0])):
             cur_rotation = self.ik_frame_slow(last_rotation, positions[i], max_iter, tol_change, device)
             last_rotation = copy.deepcopy(cur_rotation)
-            rotations[i] = last_rotation
+            rotations[i] = last_rotation        
         return rotations
-
 
     def ik_frame_slow(self, last_rotation, current_positions, max_iter, tol_change, device):
         #last_rotation (num_joint * 6) 
@@ -90,7 +69,6 @@ class LAFAN1(base_dataset.BaseMotionData):
                         line_search_fn="strong_wolfe")
 
         def f_loss(drot):
-        
             fk_joint_positions = self.fk_local_frame_pt(last_rotation + drot)
             loss = torch.nn.functional.mse_loss(fk_joint_positions, current_positions)
             print(loss)
@@ -131,12 +109,12 @@ class LAFAN1(base_dataset.BaseMotionData):
         num_jnt = len(self.joint_name)
         num_frames = len(frames)
         cnt = 0
-
-        ang_frames = frames[:,3+num_jnt*6:]
+        frames = copy.deepcopy(frames)
+        ang_frames = frames[:,3+num_jnt*6:3+num_jnt*12]
         joint_positions = np.zeros((num_frames, num_jnt, 3), dtype=dtype)
         joint_rotations = np.zeros((num_frames, num_jnt, 3, 3), dtype=dtype)
         joint_orientations = np.zeros((num_frames, num_jnt, 3, 3), dtype=dtype)
-        #fk (at origin)
+        
         for i in range(num_jnt):
             local_rotation = geo_util.rotation_6d_to_matrix(ang_frames[:, 6*i: 6*i+6])
             if self.joint_parent[i] == -1: #root
@@ -144,7 +122,7 @@ class LAFAN1(base_dataset.BaseMotionData):
             else:                
                 joint_orientations[:,i] = np.matmul(joint_orientations[:,self.joint_parent[i]], local_rotation)
                 joint_positions[:,i] = joint_positions[:,self.joint_parent[i]] + np.matmul(joint_orientations[:,self.joint_parent[i]], self.joint_offset[i])
-        
+
         joint_positions[..., 1] += frames[..., [4]] #height
         return  joint_positions
 
@@ -165,7 +143,6 @@ class LAFAN1(base_dataset.BaseMotionData):
             st_positions += frames[i, 3+3*num_jnt:3+6*num_jnt]  
             new_positions[i, :] = st_positions   
         new_positions = new_positions.reshape((-1, num_jnt,3))
-        
         return new_positions
 
     def joint_step_frame(self, frame):
@@ -178,11 +155,11 @@ class LAFAN1(base_dataset.BaseMotionData):
         jnts = jnts.reshape(-1,self.num_jnt,3)
         return jnts
 
-    def x_to_jnts(self, x, mode='angle'):
-        num_jnt = len(self.joint_name)
+    def x_to_jnts(self, x, mode):
+        x = copy.deepcopy(x)
         dxdy = x[...,:2] 
         dr = x[...,2]
-
+        num_jnt = len(self.joint_name)
         if mode == 'angle':
             jnts = self.fk_local_seq(x) 
         elif mode == 'position':
@@ -202,25 +179,22 @@ class LAFAN1(base_dataset.BaseMotionData):
            cur_pos = np.zeros((1,3))
            cur_pos[0,0] = dxdy[i,0]
            cur_pos[0,2] = dxdy[i,1]
-           dpm += np.dot(cur_pos, geo_util.rot_yaw(yaws[i]))
+           dpm += np.dot(cur_pos,geo_util.rot_yaw(yaws[i]))
            dpm_lst[i,:] = copy.deepcopy(dpm)
            jnts[i,:,:] = np.dot(jnts[i,:,:], geo_util.rot_yaw(yaws[i])) + copy.deepcopy(dpm)
         return jnts
-        
-    def x_to_trajs(self,x):
-        x = x[...,:3]
-        dxdy = x[...,:2] 
-        dr = x[...,2]
-        #jnts = np.reshape(x[...,3:69],(-1,self.num_jnt,3))
-        dpm = np.array([[0.0,0.0,0.0]])
-        dpm_lst = np.zeros((dxdy.shape[0],3))
-        yaws = np.cumsum(dr)
-        yaws = yaws - (yaws//(np.pi*2))*(np.pi*2)
-        for i in range(1, x.shape[0]):
-           cur_pos = np.zeros((1,3))
-           cur_pos[0,0] = dxdy[i,0]
-           cur_pos[0,2] = dxdy[i,1]
-           dpm += np.dot(cur_pos,geo_util.rot_yaw(yaws[i]))
-           dpm_lst[i,:] = copy.deepcopy(dpm)
-        return dpm_lst[...,[0,2]]
+    
+
+    def __len__(self):
+        return len(self.valid_idx)
+
+    def __getitem__(self, idx):
+        idx_ = self.valid_idx[idx]
+        motion = self.motion_flattened[idx_:idx_+self.rollout]
+        return motion
+    
+    def plot_jnts(self, x, path=None):
+        return plot_util.plot_style100(x, self.links, 30, path)
+
+
 
