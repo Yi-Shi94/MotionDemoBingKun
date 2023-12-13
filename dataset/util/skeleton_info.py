@@ -232,6 +232,6 @@ STYLE100_joint_offset = [[ 0.0000000e+00,  0.0000000e+00,  0.0000000e+00],
 skel_dict = {
             'STYLE100':{'links':STYLE100_links, 'name_joint':STYLE100_name_joint, 'offset_joint':STYLE100_joint_offset, 'num_joint':23, 'root_idx':0, 'head_idx':[5,6], 'hand_idx':[10,14],'foot_idx':[17,18,21,22],'fps':30,'unit':'meter', 'st_angle_offset':-90},
             'LAFAN1':{'links':LAFAN1_links, 'name_joint':LAFAN1_name_joint, 'offset_joint':LAFAN1_joint_offset, 'num_joint':22, 'root_idx':0, 'head_idx':[12,13],'hand_idx':[17,21],'foot_idx':[3,4,7,8],  'fps':30, 'unit':'meter','st_angle_offset':-180, 'transmap':LAFAN1_transmap, 'rev_transmap':LAFAN1_rev_transmap, },
-            'AMASS':{'links': SMPL_links, 'name_joint':SMPL_name_joint,'offset_joint':SMPL_joint_offset, 'num_joint':22, 'root_idx':0,  'head_idx':[12,15], 'hand_idx':[20,21], 'foot_idx':[7,8,10,11], 'fps':30, 'unit':'meter'}
+            'AMASS':{'links': SMPL_links, 'name_joint':SMPL_name_joint,'offset_joint':SMPL_joint_offset, 'num_joint':22, 'root_idx':0,  'head_idx':[12,15], 'hand_idx':[20,21], 'foot_idx':[7,8,10,11], 'fps':30, 'unit':'cm'}
             }
 

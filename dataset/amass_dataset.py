@@ -43,10 +43,10 @@ class AMASS(base_dataset.BaseMotionData):
         frames = copy.deepcopy(frames)
         positions = frames[..., 3:3+3*num_jnt]
         positions = positions.reshape((-1, num_jnt, 3))
-        positions[...,1] -= frames[...,None,4]
+        positions[...,2] -= frames[...,None,5]
 
-        last_rotation = init_rotation.reshape(-1, num_jnt, 6)
-        rotations = np.zeros((frames.shape[0], num_jnt, 6))
+        last_rotation = init_rotation.reshape(-1, num_jnt, 4)
+        rotations = np.zeros((frames.shape[0], num_jnt, 4))
 
         for i in tqdm.tqdm(range(positions.shape[0])):
             cur_rotation = self.ik_frame_slow(last_rotation, positions[i], max_iter, tol_change, device)
@@ -108,21 +108,22 @@ class AMASS(base_dataset.BaseMotionData):
         cnt = 0
 
         rot_frames = frames[:,3+num_jnt*6:]
-        joint_positions = np.zeros((num_frames, num_jnt, 3), dtype=dtype)
-        joint_rotations = np.zeros((num_frames, num_jnt, 4), dtype=dtype)
-        joint_orientations = np.zeros((num_frames, num_jnt, 4), dtype=dtype)
+        joint_offset = np.array(self.joint_offset)
+
+        joint_positions = np.zeros((num_frames, num_jnt, 3))
+        joint_rotations = np.zeros((num_frames, num_jnt, 3, 3))
+        joint_orientations = np.zeros((num_frames, num_jnt, 3, 3))
         #fk (at origin)
         for i in range(num_jnt):
-            if joint_parent[i] == -1: #root
-                local_rotation = geo_util.exp_map_to_quat() 
+            local_rotation = geo_util.rotation_6d_to_matrix(rot_frames[:, i*6:i*6+6]) 
+            if i == 0: #root
                 joint_orientations[:,i] = local_rotation
             else:
-                idx = i-1
-                local_rotation = geo_util.exp_map_to_quat(rot_frames[:, i * 4: i * 4 + 4])                
-                joint_orientations[:,i] = geo_util.quat_mul(joint_orientations[:,joint_parent[i]], local_rotation)
-                joint_positions[:,i] = joint_positions[:,joint_parent[i]] + geo_util.quat_rotate(joint_orientations[:,joint_parent[i]], joint_offset[i].expand(joint_orientations.shape[0],-1))
-        joint_positions += frames[..., [0], 5] #height
+                joint_orientations[:,i] = np.matmul(joint_orientations[:,self.joint_parent[i]], local_rotation)
+                joint_positions[:,i] = joint_positions[:,self.joint_parent[i]] + np.matmul(joint_orientations[:,self.joint_parent[i]], joint_offset[i])
         
+        joint_positions[..., :, 2] += frames[..., [0], 5] #height
+        self.plot_jnts(joint_positions)
         return  joint_positions
 
     def vel_step_frame(self, last_frame, frame):
@@ -172,23 +173,24 @@ class AMASS(base_dataset.BaseMotionData):
            jnts[i,:,:] = np.dot(jnts[i,:,:], geo_util.rot_yaw(yaws[i])) + copy.deepcopy(dpm)
         return jnts
 
-    def x_to_jnts(self, x, mode='angle'):
+    def x_to_jnts(self, x, mode):
+        x = copy.deepcopy(x)
         dr = x[:,2]
         dxdydz = np.zeros((x.shape[0],3))
         dxdydz[:,:2] = x[:,:2]
         
         if mode == 'angle':
-            jnts = self.fk_local_seq(x) 
+            joints = self.fk_local_seq(x) 
         elif mode == 'position':
-            jnts = self.joint_step_seq(x)
+            joints = self.joint_step_seq(x)
         elif mode == 'velocity':
-            jnts = self.vel_step_seq(x)
+            joints = self.vel_step_seq(x)
         elif mode == 'ik_fk':
             rotations = self.ik_seq_slow(x[0],x[1:])
             x[1:, 3+6*num_jnt:3+12*num_jnt] = rotations.reshape(-1,6*num_jnt)
-            jnts = self.fk_local_seq(x)
+            joints = self.fk_local_seq(x)
 
-        joints = jnts
+         
         out_joints = np.zeros((x.shape[0], 22, 3))
         cur_dxdydz = np.array([[0.0,0.0,0.0]])
         cur_angle = 0

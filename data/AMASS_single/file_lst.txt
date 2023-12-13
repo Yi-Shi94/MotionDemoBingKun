@@ -1,5 +1,2 @@
 data/AMASS_single/CMU/05_02_poses_224_frames_30_fps.npz
-data/AMASS_single/CMU/18_06_poses_81_frames_30_fps.npz
-data/AMASS_single/CMU/18_07_poses_57_frames_30_fps.npz
 data/AMASS_single/CMU/07_05_poses_103_frames_30_fps.npz
-data/AMASS_single/CMU/02_02_poses_59_frames_30_fps.npz

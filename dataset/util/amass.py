@@ -29,11 +29,16 @@ def load_amass_file(amass_file, root_idx):
     
     root_orient = torch.tensor(root_orient)
     joints = torch.tensor(joints)
-    pose_body = torch.tensor(pose_body)#.view(pose_body.shape[0],-1,3)
-
+    pose_body = torch.tensor(pose_body).view(pose_body.shape[0],-1,3)
+    len_jnt_body = pose_body.shape[1]
     root_orient_quat = geo_util.exp_map_to_quat(root_orient)
     root_orient_quat_z = geo_util.calc_heading_quat(root_orient_quat)
-    root_orient_quat_xy = geo_util.quat_diff(root_orient_quat_z, root_orient_quat) 
+    root_orient_quat_z_inv =  geo_util.quat_conjugate(root_orient_quat_z).float()
+
+    pose_body = torch.cat([geo_util.quat_to_6d(geo_util.exp_map_to_quat(pose_body[:,i,:])) for i in range(len_jnt_body)],dim=1)
+    
+    root_orient_xy = geo_util.quat_diff(geo_util.quat_conjugate(root_orient_quat), root_orient_quat_z_inv)
+    root_orient_xy = geo_util.quat_to_6d(root_orient_xy)
 
     rot0 = root_orient_quat_z[..., :-1, :]
     rot1 = root_orient_quat_z[..., 1:, :]
@@ -46,7 +51,6 @@ def load_amass_file(amass_file, root_idx):
     root_dxdy[...,2] *= 0
 
     joints[:,:,:2] = joints[:,:,:2] - joints[:,[root_idx],:2]
-    root_orient_quat_z_inv = geo_util.quat_conjugate(root_orient_quat_z).float()
     
     for i_jnt in range(joints.shape[1]):
         joints[:,i_jnt,:] = geo_util.quat_rotate(root_orient_quat_z_inv, joints[:,i_jnt,:])
@@ -58,6 +62,7 @@ def load_amass_file(amass_file, root_idx):
                         root_drot_angle_z.reshape(root_dxdy.shape[0],-1), 
                         joints[1:].reshape(root_dxdy.shape[0],-1), 
                         joints_vel.reshape(root_dxdy.shape[0],-1), 
+                        root_orient_xy[1:].reshape(root_dxdy.shape[0],-1),
                         pose_body[1:].reshape(root_dxdy.shape[0],-1)],axis=-1)  
     return xs
 
