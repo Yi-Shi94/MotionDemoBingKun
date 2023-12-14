@@ -123,7 +123,7 @@ class AMASS(base_dataset.BaseMotionData):
                 joint_positions[:,i] = joint_positions[:,self.joint_parent[i]] + np.matmul(joint_orientations[:,self.joint_parent[i]], joint_offset[i])
         
         joint_positions[..., :, 2] += frames[..., [0], 5] #height
-        self.plot_jnts(joint_positions)
+        #self.plot_jnts(joint_positions)
         return  joint_positions
 
     def vel_step_frame(self, last_frame, frame):
