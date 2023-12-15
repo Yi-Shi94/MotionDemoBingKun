@@ -93,7 +93,7 @@ def plot_lafan1(x, links, fps=30, save_path=None, colors = None):
         plt.show()
     plt.close()
 
-def plot_style100(x, links, fps, save_path=None):
+def plot_style100(x, links, fps, save_path=None,  colors = None):
     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -103,8 +103,13 @@ def plot_style100(x, links, fps, save_path=None):
 
     link_data = np.zeros((len(links),x.shape[0]-1,3,2))
     xini = x[0]
-    link_obj = [ax.plot([xini[st,0],xini[ed,0]],[xini[st,2],xini[ed,2]],[xini[st,1],xini[ed,1]],color='r')[0]
+    if colors is None:
+        link_obj = [ax.plot([xini[st,0],xini[ed,0]],[xini[st,2],xini[ed,2]],[xini[st,1],xini[ed,1]],color='r')[0]
                     for st,ed in links]
+    else:
+        link_obj = [ax.plot([xini[st,0],xini[ed,0]],[xini[st,2],xini[ed,2]],[xini[st,1],xini[ed,1]],color=colors[j])[0]
+                    for j,(st,ed) in enumerate(links)]
+
 
     ax.set_xlabel('$X$')
     ax.set_ylabel('$Y$')
@@ -141,7 +146,7 @@ def plot_style100(x, links, fps, save_path=None):
         plt.show()
     plt.close()
 
-def plot_amass(x, links, save_path=None):
+def plot_amass(x, links, save_path=None, colors=None):
     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -151,8 +156,12 @@ def plot_amass(x, links, save_path=None):
 
     link_data = np.zeros((len(links),x.shape[0]-1,3,2))
     xini = x[0]
-    link_obj = [ax.plot([xini[st,0],xini[ed,0]],[xini[st,2],xini[ed,2]],[xini[st,1],xini[ed,1]],color='r')[0]
+    if colors is None:
+        link_obj = [ax.plot([xini[st,0],xini[ed,0]],[xini[st,1],xini[ed,1]],[xini[st,2],xini[ed,2]],color='r')[0]
                     for st,ed in links]
+    else:
+        link_obj = [ax.plot([xini[st,0],xini[ed,0]],[xini[st,1],xini[ed,1]],[xini[st,2],xini[ed,2]],color=colors[j])[0]
+                    for j,(st,ed) in enumerate(links)]
 
     ax.set_xlabel('$X$')
     ax.set_ylabel('$Y$')

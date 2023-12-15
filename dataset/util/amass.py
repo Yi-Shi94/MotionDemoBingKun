@@ -66,6 +66,13 @@ def load_amass_file(amass_file, root_idx):
                         pose_body[1:].reshape(root_dxdy.shape[0],-1)],axis=-1)  
     return xs
 
+def save_amass_file(amass_file, x, original_amass):
+    #x: F * DIM
+    out_dict = {}
+    return amass
+
+def save_bvh_file(bvh_file):
+    pass
 
 def load_amass_info(amass_file):
     import matplotlib.pyplot as plt

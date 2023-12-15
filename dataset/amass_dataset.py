@@ -26,7 +26,6 @@ class AMASS(base_dataset.BaseMotionData):
     def plot_traj(self, x, path=None):
         return plot_util.plot_traj_amass(x, path)
     
-
     def get_motion_fpaths(self):
         path =  osp.join(self.path,'**/*.{}'.format('npz'))
         file_lst = glob.glob(path, recursive = True)
@@ -37,16 +36,16 @@ class AMASS(base_dataset.BaseMotionData):
         amass_util.load_amass_info(fname)
         return xs   
 
-    def ik_seq_slow(self, init_frame, frames, max_iter=1000, tol_change=0.0000005, device = 'cuda:0'):
+    def ik_seq_slow(self, init_frame, frames, max_iter=1000, tol_change=0.0000001, device = 'cuda:0'):
         num_jnt = len(self.joint_name)
-        init_rotation = init_frame[..., 3+6*num_jnt: 3+10*num_jnt]
+        init_rotation = init_frame[..., 3+6*num_jnt: 3+12*num_jnt]
         frames = copy.deepcopy(frames)
         positions = frames[..., 3:3+3*num_jnt]
         positions = positions.reshape((-1, num_jnt, 3))
         positions[...,2] -= frames[...,None,5]
 
-        last_rotation = init_rotation.reshape(-1, num_jnt, 4)
-        rotations = np.zeros((frames.shape[0], num_jnt, 4))
+        last_rotation = init_rotation.reshape(-1, num_jnt, 6)
+        rotations = np.zeros((frames.shape[0], num_jnt, 6))
 
         for i in tqdm.tqdm(range(positions.shape[0])):
             cur_rotation = self.ik_frame_slow(last_rotation, positions[i], max_iter, tol_change, device)
@@ -85,8 +84,7 @@ class AMASS(base_dataset.BaseMotionData):
 
     def fk_local_frame_pt(self, rotation_6d):
         num_jnt = len(self.joint_name)
-        joint_rotations = torch.zeros((num_jnt, 4), device=rotation_6d.device, dtype=rotation_6d.dtype)
-        joint_orientations = torch.zeros((num_jnt, 4), device=rotation_6d.device, dtype=rotation_6d.dtype)
+        joint_orientations = torch.zeros((num_jnt, 3, 3), device=rotation_6d.device, dtype=rotation_6d.dtype)
         joint_positions = torch.zeros((num_jnt,3), device=rotation_6d.device, dtype=rotation_6d.dtype)
 
         joint_offset_pt = torch.tensor(self.joint_offset, device = rotation_6d.device, requires_grad=False, dtype=rotation_6d.dtype)
@@ -111,7 +109,6 @@ class AMASS(base_dataset.BaseMotionData):
         joint_offset = np.array(self.joint_offset)
 
         joint_positions = np.zeros((num_frames, num_jnt, 3))
-        joint_rotations = np.zeros((num_frames, num_jnt, 3, 3))
         joint_orientations = np.zeros((num_frames, num_jnt, 3, 3))
         #fk (at origin)
         for i in range(num_jnt):
@@ -125,6 +122,7 @@ class AMASS(base_dataset.BaseMotionData):
         joint_positions[..., :, 2] += frames[..., [0], 5] #height
         #self.plot_jnts(joint_positions)
         return  joint_positions
+
 
     def vel_step_frame(self, last_frame, frame):
         vel = copy.deepcopy(frame[...,3+3*num_jnt:3+6*num_jnt])
@@ -155,30 +153,13 @@ class AMASS(base_dataset.BaseMotionData):
         jnts = jnts.reshape(-1,self.num_jnt,3)
         return jnts
 
-    def x_to_jnts(self, x, mode='angle'):
-        num_jnt = len(self.joint_name)
-        dxdy = x[...,:2] 
-        dr = x[...,2]
-
-        dpm = np.array([[0.0,0.0,0.0]])
-        dpm_lst = np.zeros((dxdy.shape[0],3))
-        yaws = np.cumsum(dr)
-        yaws = yaws - (yaws//(np.pi*2))*(np.pi*2)
-        for i in range(1, jnts.shape[0]):
-           cur_pos = np.zeros((1,3))
-           cur_pos[0,0] = dxdy[i,0]
-           cur_pos[0,2] = dxdy[i,1]
-           dpm += np.dot(cur_pos, geo_util.rot_yaw(yaws[i]))
-           dpm_lst[i,:] = copy.deepcopy(dpm)
-           jnts[i,:,:] = np.dot(jnts[i,:,:], geo_util.rot_yaw(yaws[i])) + copy.deepcopy(dpm)
-        return jnts
 
     def x_to_jnts(self, x, mode):
         x = copy.deepcopy(x)
         dr = x[:,2]
         dxdydz = np.zeros((x.shape[0],3))
         dxdydz[:,:2] = x[:,:2]
-        
+        num_jnt = len(self.joint_name)
         if mode == 'angle':
             joints = self.fk_local_seq(x) 
         elif mode == 'position':
